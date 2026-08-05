@@ -47,16 +47,19 @@ requests that action.
 
 ## MCP permissions
 
-Planning, review, and implementation discover configured servers with `claude mcp list`
-before the delegated call. Each server name is decoded explicitly as UTF-8, normalized to
-Claude's ASCII tool-name format, and passed as a server-level rule such as
-`mcp__codebase-memory-mcp`, which allows every tool exposed by that server. Explicit UTF-8
-decoding keeps the result stable even when the wrapper runs in the `C` locale.
+Planning and implementation discover configured servers with `claude mcp list` before
+the delegated call. Each server name is decoded explicitly as UTF-8 and normalized to
+Claude's ASCII tool-name format; this keeps discovery stable even when the wrapper runs
+in the `C` locale.
 
 The wrappers enumerate server prefixes because the approved legacy compatibility target
 does not support one MCP wildcard rule. They do not use `bypassPermissions`, which would
 also disable unrelated safety prompts. If server discovery fails, no MCP rules are added
 and the original Claude call continues with its existing permissions.
+
+Review deliberately does not discover or allow MCP servers. It runs in strict MCP mode
+with only Claude's built-in read-only file tools, so a configured server cannot broaden a
+review into an external read or write.
 
 ### Host-policy boundary
 
@@ -89,37 +92,44 @@ claude -p --print \
 Parse `.result` for the plan text; `.total_cost_usd` and `.session_id`
 for accounting.
 
-## Code review (read-only, diff-aware)
+## Code review (read-only, diff-aware, bounded)
 
 ```bash
 ./scripts/claude-review.sh "<PROMPT, e.g. 'Review staged changes for security'>"
 ```
 
+The wrapper captures staged and unstaged diffs with fixed, non-ext-diff Git options. It
+then streams Claude's review, prints read-only tool progress to stderr, and returns a
+timeout diagnostic rather than waiting silently. Claude receives no MCP, shell, or
+write-capable tools.
+
 Underlying call:
 
 ```bash
 claude -p --print \
+  --verbose --safe-mode \
   --model opus --effort high \
   --permission-mode dontAsk \
-  --tools Read,Grep,Glob,Bash \
-  "${CLAUDE_ALLOWED_TOOLS_ARGS[@]+"${CLAUDE_ALLOWED_TOOLS_ARGS[@]}"}" \
-  --output-format json \
+  --strict-mcp-config \
+  --tools Read,Grep,Glob \
+  --allowedTools "Read Grep Glob" \
+  --max-budget-usd 1.00 \
+  --output-format stream-json --include-partial-messages \
   --no-session-persistence \
   --add-dir "$PWD" \
   --append-system-prompt "You are a strict code reviewer. Find correctness, security, and design bugs in the diff. Cite file:line." \
   "$PROMPT"
 ```
 
-`dontAsk` permits pre-approved MCP calls in headless mode while automatically denying
-anything that would prompt. Planning exposes only `Read`, `Grep`, and `Glob`. Review also
-exposes `Bash`, but pre-approves only `git diff`, `git log`, `git show`, and `git status`;
-other Bash commands that require approval are denied instead of prompting. Neither role
-exposes `Edit` or `Write`.
+Tune a slow review without changing its permission scope with
+`CLAUDE_REVIEW_TIMEOUT_SECONDS`, `CLAUDE_REVIEW_MAX_BUDGET_USD`, or
+`CLAUDE_REVIEW_MAX_DIFF_BYTES`. The last setting rejects an oversized diff instead of
+silently truncating it.
 
 ## Output handling
 
-`claude -p --output-format json` returns a JSON **array** of stream events
-whose final element is the result envelope:
+The wrapper parses newline-delimited `stream-json` output. Its terminal `result` event
+contains the review text, session ID, and cost:
 
 ```json
 {
@@ -131,10 +141,8 @@ whose final element is the result envelope:
 }
 ```
 
-Pick the element with `type == "result"`, surface its `.result` verbatim,
-and log `.total_cost_usd` if cost tracking is requested. (Older claude
-returned this object directly, not wrapped in an array; the wrapper scripts
-handle both shapes.)
+The runner surfaces `.result` as Markdown on stdout and logs the session ID and cost on
+stderr. Intermediate JSONL remains internal except for concise tool-progress messages.
 
 ## Auth fallbacks
 
@@ -153,3 +161,4 @@ If the preflight reports neither, surface this verbatim:
 - [`scripts/claude-implement.sh`](scripts/claude-implement.sh)
 - [`scripts/claude-plan.sh`](scripts/claude-plan.sh)
 - [`scripts/claude-review.sh`](scripts/claude-review.sh)
+- [`scripts/claude-review-stream.py`](scripts/claude-review-stream.py)

@@ -27,6 +27,11 @@ for s in scripts/preflight-auth.sh scripts/preflight-shell.sh scripts/claude-mcp
     fail "L1a: $s syntax error"
   fi
 done
+if python3 -c 'import ast, pathlib; ast.parse(pathlib.Path(__import__("sys").argv[1]).read_text())' "$SCRIPT_DIR/scripts/claude-review-stream.py"; then
+  note "L1a ok: scripts/claude-review-stream.py syntax"
+else
+  fail "L1a: scripts/claude-review-stream.py syntax error"
+fi
 if claude --help >/dev/null 2>&1; then
   note "L1b ok: claude --help"
 else
@@ -54,7 +59,8 @@ else
   fail "L1f: shell probe must isolate configuration and tools"
 fi
 
-# L1g — every wrapper allows all configured MCP servers, with a safe fallback
+# L1g — planning and implementation allow configured MCP servers, with a safe fallback.
+# Review intentionally has no MCP surface and is covered by the offline stream harness.
 MCP_TEST_LOG=$(mktemp "${TMPDIR:-/tmp}/claude-mcp-test.XXXXXX")
 claude() {
   if [ "${1:-}" = "auth" ] && [ "${2:-}" = "status" ]; then
@@ -137,16 +143,10 @@ check_mcp_wrapper() {
 check_mcp_wrapper claude-plan.sh \
   'mcp__team_server mcp__claude_ai_Figma mcp_____server mcp__plugin_demo_tools' \
   0 dontAsk 'Read,Grep,Glob'
-check_mcp_wrapper claude-review.sh \
-  'Bash(git diff:*) Bash(git log:*) Bash(git show:*) Bash(git status:*) mcp__team_server mcp__claude_ai_Figma mcp_____server mcp__plugin_demo_tools' \
-  0 dontAsk 'Read,Grep,Glob,Bash'
 check_mcp_wrapper claude-implement.sh \
   'Read Grep Glob Edit Write Bash mcp__team_server mcp__claude_ai_Figma mcp_____server mcp__plugin_demo_tools' \
   0 acceptEdits ''
 check_mcp_wrapper claude-plan.sh '' 1 dontAsk 'Read,Grep,Glob'
-check_mcp_wrapper claude-review.sh \
-  'Bash(git diff:*) Bash(git log:*) Bash(git show:*) Bash(git status:*)' \
-  1 dontAsk 'Read,Grep,Glob,Bash'
 check_mcp_wrapper claude-implement.sh \
   'Read Grep Glob Edit Write Bash' 1 acceptEdits ''
 
@@ -166,6 +166,12 @@ fi
 
 unset -f claude
 rm -f "$MCP_TEST_LOG"
+
+if python3 "$SCRIPT_DIR/tests/test-review-stream.py" "$SCRIPT_DIR/scripts/claude-review-stream.py"; then
+  note "L1i ok: bounded review stream harness"
+else
+  fail "L1i: bounded review stream harness"
+fi
 
 # L1c — preflight runs (may exit 2 if no auth; that's the "warn" path)
 if "$SCRIPT_DIR/scripts/preflight-auth.sh" >/dev/null 2>&1; then
@@ -203,36 +209,10 @@ print(d.get("result",""))' \
   fi
 fi
 
-# L2m — bounded live MCP execution and built-in surface proof
-if [ "${RUN_L3_MCP:-0}" = "1" ] && [ "$HAVE_AUTH" = "1" ]; then
-  MCP_BIN=$(command -v codebase-memory-mcp 2>/dev/null || true)
-  if [ -z "$MCP_BIN" ]; then
-    note "L2m skip: codebase-memory-mcp not on PATH"
-  else
-    MCP_CONFIG=$(python3 -c 'import json,sys; print(json.dumps({"mcpServers":{"codebase-memory-mcp":{"type":"stdio","command":sys.argv[1],"alwaysLoad":True}}}))' "$MCP_BIN")
-    run_live_mcp() {
-      local role=$1 tools=$2 allowed=$3 output
-      output=$(mktemp "${TMPDIR:-/tmp}/claude-live-mcp.XXXXXX")
-      if claude -p --print --setting-sources project --disable-slash-commands \
-        --strict-mcp-config --mcp-config "$MCP_CONFIG" \
-        --model sonnet --effort low --permission-mode dontAsk \
-        --tools "$tools" --allowedTools "$allowed" \
-        --system-prompt 'Use only the requested tool.' \
-        --output-format stream-json --verbose --no-session-persistence \
-        --max-turns 4 --max-budget-usd 0.10 \
-        'Call mcp__codebase-memory-mcp__list_projects exactly once. After a successful non-error tool result, reply exactly MCP_OK. Do not use any other tool.' \
-        >"$output" \
-        && python3 "$SCRIPT_DIR/tests/assert-live-mcp.py" "$role" <"$output"; then
-        note "L2m ok: $role executed MCP with its bounded built-in surface"
-      else
-        fail "L2m: $role live MCP regression failed"
-      fi
-      rm -f "$output"
-    }
-    run_live_mcp plan 'Read,Grep,Glob' 'mcp__codebase-memory-mcp'
-    run_live_mcp review 'Read,Grep,Glob,Bash' \
-      'Bash(git diff:*) Bash(git log:*) Bash(git show:*) Bash(git status:*) mcp__codebase-memory-mcp'
-  fi
+# L2m — review deliberately has no MCP surface. The offline L1i harness proves the
+# strict tool boundary without spending credits or invoking a configured server.
+if [ "${RUN_L3_MCP:-0}" = "1" ]; then
+  note "L2m skip: review is intentionally MCP-free"
 fi
 
 # L3 — plan & review wrappers
