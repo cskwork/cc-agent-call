@@ -1,6 +1,6 @@
 ---
 name: call-agent
-description: Delegate one task to a named peer CLI, or when the host lacks the required capability.
+description: Delegates one task from the host CLI to a peer agentic CLI. Use when the user names a peer tool - codex, agy/antigravity, kiro/kiro-cli, claude/claude code, notebooklm/nblm, gpt-pro/chatgpt pro - or when the request needs a capability the host lacks, such as image generation, Google-grounded web search, natural-language-to-shell translation, or RAG over a PDF/URL/YouTube corpus.
 allowed-tools:
   - Bash
   - Read
@@ -12,8 +12,8 @@ allowed-tools:
 # call-agent - delegate to a peer AI CLI
 
 Router. You (the host CLI) hand ONE task to a peer agentic CLI when the peer does it
-better, then report the result back. Load only the one
-`reference/<target>/call.md` you route to - never all of them.
+better, then report the result back. Load exactly one
+`reference/<target>/call.md` - the one you routed to.
 
 ## Rule zero - never call yourself
 
@@ -28,8 +28,9 @@ Fire on TWO conditions only:
 1. **Explicit name** - the user names a target tool.
 2. **Capability gap** - the user asks for something the host cannot do natively.
 
-Never auto-fire on generic "review / plan / refactor / debug" - the host is presumed
-capable. When the win is unclear, ask before spending a peer's credits.
+Generic review, planning, refactoring, debugging, and implementation stay with the
+host - it is presumed capable. When the win is unclear, ask before spending a peer's
+credits.
 
 ## Route (match the request to ONE target, then load its call.md)
 
@@ -62,6 +63,6 @@ the target, report the normal-terminal fallback instead of retrying with weaker 
 | `reference/agy/templates.md` | need copy-paste agy prompt scaffolds |
 | `reference/<target>/scripts/*.sh` | the routed call.md tells you to run a wrapper script |
 
-**Done =** target named; route-specific preflight passed; output and cost/session id
-reported; generated files verified. A blocked target ends with an actionable fallback,
-never a success claim.
+**Done =** target named; route-specific preflight passed; peer output reported, plus
+cost/session id when the target emits one; every generated file confirmed on disk. A
+blocked target ends with an actionable fallback, never a success claim.
