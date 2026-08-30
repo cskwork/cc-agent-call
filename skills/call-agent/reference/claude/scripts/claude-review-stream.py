@@ -132,7 +132,7 @@ def run_review(workspace: Path, instructions: str, diff: str) -> int:
         "--verbose",
         "--safe-mode",
         "--model",
-        os.environ.get("CLAUDE_REVIEW_MODEL", "opus"),
+        os.environ.get("CLAUDE_REVIEW_MODEL") or os.environ.get("CLAUDE_MODEL") or "opus",
         "--effort",
         os.environ.get("CLAUDE_REVIEW_EFFORT", "high"),
         "--permission-mode",

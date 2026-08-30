@@ -79,6 +79,15 @@ Routine work (`review this code`, `plan this feature`) does **not** trigger dele
 
 Each target's exact invocation, flags, and wrapper scripts live in `skills/call-agent/reference/<target>/`. The router (`skills/call-agent/SKILL.md`) shows the full decision table.
 
+### Model selection
+
+Wrappers pass no hardcoded chat model wherever the peer CLI has its own default
+(`codex`, `agy`); `kiro-chat.sh` takes an optional `--model` flag. The `claude`
+wrappers default to `opus` and honor `CLAUDE_MODEL` (any alias — `sonnet`, `haiku`,
+`fable` — or a full model name). Review prefers `CLAUDE_REVIEW_MODEL`, then
+`CLAUDE_MODEL`, then `opus`. The shell preflight probe pins a cheap model;
+override it with `CLAUDE_PROBE_MODEL` if the `haiku` alias ever changes.
+
 ---
 
 ## 4. Install

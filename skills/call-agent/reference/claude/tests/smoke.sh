@@ -80,10 +80,15 @@ claude() {
   fi
 
   case " $* " in
-    *" --model opus "*)
-      for arg in "$@"; do
-        printf 'ARG=%s\n' "$arg" >>"$MCP_TEST_LOG"
-      done
+    *" --model "*)
+      case " $* " in
+        *" --max-turns "*) ;; # shell probe: not the delegated call
+        *)
+          for arg in "$@"; do
+            printf 'ARG=%s\n' "$arg" >>"$MCP_TEST_LOG"
+          done
+          ;;
+      esac
       ;;
   esac
   case " $* " in
@@ -149,6 +154,23 @@ check_mcp_wrapper claude-implement.sh \
 check_mcp_wrapper claude-plan.sh '' 1 dontAsk 'Read,Grep,Glob'
 check_mcp_wrapper claude-implement.sh \
   'Read Grep Glob Edit Write Bash' 1 acceptEdits ''
+
+# L1j — model selection is flexible: CLAUDE_MODEL overrides the opus default.
+: >"$MCP_TEST_LOG"
+if CLAUDE_MODEL=fable "$SCRIPT_DIR/scripts/claude-plan.sh" test >/dev/null 2>&1 \
+   && grep -Fqx -- 'ARG=--model' "$MCP_TEST_LOG" \
+   && grep -Fqx -- 'ARG=fable' "$MCP_TEST_LOG"; then
+  note "L1j ok: CLAUDE_MODEL overrides the default model"
+else
+  fail "L1j: CLAUDE_MODEL override not honored"
+fi
+if CLAUDE_MODEL=sonnet "$SCRIPT_DIR/scripts/claude-implement.sh" test >/dev/null 2>&1 \
+   && grep -Fqx -- 'ARG=sonnet' "$MCP_TEST_LOG"; then
+  note "L1j ok: CLAUDE_MODEL overrides the implement model"
+else
+  fail "L1j: CLAUDE_MODEL override not honored by claude-implement.sh"
+fi
+: >"$MCP_TEST_LOG"
 
 BASH32_NORMALIZED=$(LC_ALL=C /bin/bash -c '
 claude() {

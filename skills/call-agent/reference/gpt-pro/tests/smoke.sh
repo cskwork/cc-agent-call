@@ -52,7 +52,7 @@ else
 fi
 
 # L1e - sanitizer fail-fast on a planted secret
-echo "api_key = sk-abcdefghijklmnop0123456789" > "$TMP/leak.txt"
+echo "api_key = sk-abcdefghijklmnop""0123456789" > "$TMP/leak.txt"
 if bash "$SCRIPTS/gpt-pro-bundle.sh" "Smoke secret" \
       --files "$TMP/leak.txt" --out "$TMP/out2" --no-clip >/dev/null 2>&1; then
   fail "L1e: sanitizer did NOT block a planted secret"

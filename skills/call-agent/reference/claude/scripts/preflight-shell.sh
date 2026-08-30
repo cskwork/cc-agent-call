@@ -14,7 +14,7 @@ trap 'rm -f "$ERR_FILE"' EXIT
 
 OUT_JSON=$(claude -p --print \
   --safe-mode \
-  --model haiku \
+  --model "${CLAUDE_PROBE_MODEL:-haiku}" \
   --effort low \
   --permission-mode acceptEdits \
   --tools Bash \

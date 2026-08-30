@@ -18,7 +18,7 @@ PROMPT="$*"
 SYS="You are a planner. Produce an actionable plan with numbered steps, risks, and acceptance criteria. Do not modify any files. Output as markdown."
 
 OUT_JSON=$(claude -p --print \
-  --model opus \
+  --model "${CLAUDE_MODEL:-opus}" \
   --effort high \
   --permission-mode dontAsk \
   --tools Read,Grep,Glob \

@@ -79,6 +79,10 @@
 
 각 타깃의 정확한 호출법·플래그·래퍼 스크립트는 `skills/call-agent/reference/<target>/`에 있습니다. 전체 결정 표는 라우터 `skills/call-agent/SKILL.md`에서 볼 수 있습니다.
 
+### 모델 선택
+
+래퍼는 상대 CLI가 자체 기본 모델을 갖고 있으면(`codex`, `agy`) 모델을 하드코딩하지 않고, `kiro-chat.sh`는 선택적 `--model` 플래그를 받습니다. `claude` 래퍼는 기본값 `opus`를 쓰고 `CLAUDE_MODEL`(별칭 `sonnet`·`haiku`·`fable` 또는 전체 모델명)로 바꿀 수 있습니다. 리뷰는 `CLAUDE_REVIEW_MODEL` → `CLAUDE_MODEL` → `opus` 순으로 적용합니다. 셸 사전 점검은 저렴한 모델을 고정해 쓰며, `haiku` 별칭이 사라지면 `CLAUDE_PROBE_MODEL`로 바꿔 주세요.
+
 ---
 
 ## 4. 설치

@@ -144,6 +144,14 @@ contains the review text, session ID, and cost:
 The runner surfaces `.result` as Markdown on stdout and logs the session ID and cost on
 stderr. Intermediate JSONL remains internal except for concise tool-progress messages.
 
+## Model selection
+
+All claude wrappers default to `--model opus`. Set `CLAUDE_MODEL` to any alias
+(`sonnet`, `haiku`, `fable`, `opus`) or a full model name to override plan and
+implement. Review resolves `CLAUDE_REVIEW_MODEL` first, then `CLAUDE_MODEL`,
+then `opus`. The shell preflight probe pins a cheap model; override with
+`CLAUDE_PROBE_MODEL` if the `haiku` alias ever changes.
+
 ## Auth fallbacks
 
 - Preferred: Claude Max / Pro OAuth (stored at `~/.claude/auth.json`)

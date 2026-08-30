@@ -19,7 +19,7 @@ PROMPT="$*"
 SYS="Implement the requested task in the current workspace. Inspect before editing, keep changes scoped, and run relevant verification. Do not commit, push, or deploy unless explicitly requested. Report changed files and verification evidence."
 
 OUT_JSON=$(claude -p --print \
-  --model opus \
+  --model "${CLAUDE_MODEL:-opus}" \
   --effort high \
   --permission-mode acceptEdits \
   "${CLAUDE_ALLOWED_TOOLS_ARGS[@]+"${CLAUDE_ALLOWED_TOOLS_ARGS[@]}"}" \
