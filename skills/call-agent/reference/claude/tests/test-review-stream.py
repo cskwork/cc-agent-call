@@ -20,7 +20,7 @@ sys.argv = [sys.argv[0]]
 
 
 class ClaudeReviewStreamTest(unittest.TestCase):
-    def invoke(self, mode: str, *, max_diff_bytes: int = 10_000, timeout_seconds: int = 3) -> tuple[subprocess.CompletedProcess[str], Path]:
+    def invoke(self, mode: str, *, max_diff_bytes: int = 10_000, timeout_seconds: int = 3, extra_env: dict[str, str] | None = None) -> tuple[subprocess.CompletedProcess[str], Path]:
         self.assertIsNotNone(RUNNER)
         temp_dir = Path(tempfile.mkdtemp(prefix="claude-review-test."))
         self.addCleanup(lambda: shutil.rmtree(temp_dir, ignore_errors=True))
@@ -69,6 +69,8 @@ class ClaudeReviewStreamTest(unittest.TestCase):
                 "CLAUDE_REVIEW_MAX_BUDGET_USD": "0.10",
             }
         )
+        if extra_env:
+            environment.update(extra_env)
         completed = subprocess.run(
             [sys.executable, str(RUNNER), str(workspace), "Review this change"],
             capture_output=True,
@@ -111,6 +113,18 @@ class ClaudeReviewStreamTest(unittest.TestCase):
         self.assertEqual(2, completed.returncode)
         self.assertIn("CLAUDE_REVIEW_MAX_DIFF_BYTES=1", completed.stderr)
         self.assertFalse((temp_dir / "claude-args.json").exists())
+
+    def test_model_env_precedence_review_model_then_claude_model_then_default(self) -> None:
+        for env, expected in (
+            ({"CLAUDE_REVIEW_MODEL": "sonnet", "CLAUDE_MODEL": "haiku"}, "sonnet"),
+            ({"CLAUDE_MODEL": "haiku"}, "haiku"),
+            ({"CLAUDE_REVIEW_MODEL": "", "CLAUDE_MODEL": "fable"}, "fable"),
+            ({}, "opus"),
+        ):
+            with self.subTest(env=env or "unset"):
+                _, temp_dir = self.invoke("success", extra_env=env)
+                args = json.loads((temp_dir / "claude-args.json").read_text(encoding="utf-8"))
+                self.assertEqual(expected, args[args.index("--model") + 1])
 
 
 if __name__ == "__main__":

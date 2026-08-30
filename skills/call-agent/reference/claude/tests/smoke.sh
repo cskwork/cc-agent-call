@@ -59,6 +59,12 @@ else
   fail "L1f: shell probe must isolate configuration and tools"
 fi
 
+if grep -q -- 'CLAUDE_PROBE_MODEL:-haiku' "$SCRIPT_DIR/scripts/preflight-shell.sh"; then
+  note "L1k ok: shell probe model honors CLAUDE_PROBE_MODEL"
+else
+  fail "L1k: shell probe model must stay overridable via CLAUDE_PROBE_MODEL"
+fi
+
 # L1g — planning and implementation allow configured MCP servers, with a safe fallback.
 # Review intentionally has no MCP surface and is covered by the offline stream harness.
 MCP_TEST_LOG=$(mktemp "${TMPDIR:-/tmp}/claude-mcp-test.XXXXXX")
