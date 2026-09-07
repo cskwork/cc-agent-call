@@ -1,6 +1,6 @@
 ---
 name: call-agent
-description: Delegates one task from the host CLI to a peer agentic CLI. Use when the user names a peer tool - codex, agy/antigravity, kiro/kiro-cli, claude/claude code, notebooklm/nblm, gpt-pro/chatgpt pro - or when the request needs a capability the host lacks, such as image generation, Google-grounded web search, natural-language-to-shell translation, or RAG over a PDF/URL/YouTube corpus.
+description: Delegate a bounded task to a user-named peer CLI, or to fill a capability the host lacks. Supports Codex, Claude, Antigravity, Kiro, NotebookLM, and ChatGPT Pro.
 allowed-tools:
   - Bash
   - Read
@@ -18,8 +18,7 @@ better, then report the result back. Load exactly one
 ## Rule zero - never call yourself
 
 Whichever CLI is reading this is the *host*. Routing a task to the host is a no-op (you
-would just do it yourself). Delegate only to a DIFFERENT CLI whose capability the host
-lacks. Inside Claude Code, never route to `claude`; inside Codex, never route to `codex`.
+would just do it yourself). Delegate to a DIFFERENT CLI when explicitly requested or when its capability is missing from the host. Inside Claude Code, never route to `claude`; inside Codex, never route to `codex`.
 
 ## Trigger policy (conservative - external CLIs spend separate credits)
 
@@ -29,8 +28,7 @@ Fire on TWO conditions only:
 2. **Capability gap** - the user asks for something the host cannot do natively.
 
 Generic review, planning, refactoring, debugging, and implementation stay with the
-host - it is presumed capable. When the win is unclear, ask before spending a peer's
-credits.
+host - it is presumed capable. When no peer was requested and the capability gap is unclear, keep the task with the host.
 
 ## Route (match the request to ONE target, then load its call.md)
 
